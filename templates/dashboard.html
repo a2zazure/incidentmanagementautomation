@@ -1,0 +1,139 @@
+{% extends 'base.html' %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Dashboard</h1>
+</div>
+
+<div class="stats-container">
+    <div class="stat-box">
+        <h3>Your open incidents</h3>
+        <div class="stat-numbers">
+            <span class="stat-item"><strong>0</strong> triggered</span>
+            <span class="stat-item acknowledged"><strong>1</strong> acknowledged</span>
+        </div>
+    </div>
+    <div class="stat-box">
+        <h3>All open incidents</h3>
+        <div class="stat-numbers">
+            <span class="stat-item"><strong>{{ triggered_count }}</strong> triggered</span>
+            <span class="stat-item acknowledged"><strong>{{ acknowledged_count }}</strong> acknowledged</span>
+        </div>
+    </div>
+</div>
+
+<div class="incidents-section">
+    <h2>Incidents</h2>
+
+    <div class="tabs">
+        <a href="{{ url_for('incidents', status='Open') }}"
+            class="tab {{ 'active' if current_status == 'Open' else '' }}">Open {{ open_count }}</a>
+        <a href="{{ url_for('incidents', status='Triggered') }}"
+            class="tab {{ 'active' if current_status == 'Triggered' else '' }}">Triggered {{ triggered_count }}</a>
+        <a href="{{ url_for('incidents', status='Acknowledged') }}"
+            class="tab {{ 'active' if current_status == 'Acknowledged' else '' }}">Acknowledged {{ acknowledged_count
+            }}</a>
+        <a href="{{ url_for('incidents', status='Resolved') }}"
+            class="tab {{ 'active' if current_status == 'Resolved' else '' }}">Resolved {{ resolved_count }}</a>
+        <a href="{{ url_for('incidents', status='Any') }}"
+            class="tab {{ 'active' if current_status == 'Any' or not current_status else '' }}">Any Status {{ open_count
+            + resolved_count }}</a>
+        <div class="tab-actions">
+            <a href="{{ url_for('incidents', assigned_to='me') }}"
+                class="btn-secondary {{ 'active' if current_assigned_to == 'me' else '' }}">Assigned to me</a>
+            <a href="{{ url_for('incidents') }}" class="btn-secondary">All</a>
+        </div>
+    </div>
+
+    <div class="action-bar">
+        <div class="selected-actions">
+            <span>Selected Incidents:</span>
+            <button class="btn-action" onclick="performBulkAction('resolve')">Resolve</button>
+            <button class="btn-action" onclick="performBulkAction('acknowledge')">Acknowledge</button>
+            <button class="btn-action" onclick="performBulkAction('reassign')">Reassign</button>
+        </div>
+        <div class="search-box">
+            <label>Go to incident # :</label>
+            <input type="text" placeholder="">
+        </div>
+    </div>
+
+    <table class="incidents-table">
+        <thead>
+            <tr>
+                <th><input type="checkbox"></th>
+                <th>#</th>
+                <th>Created On</th>
+                <th>Details</th>
+                <th>Service</th>
+                <th>Assigned To</th>
+                <th>Status</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for incident in incidents %}
+            <tr class="incident-row {{ incident.status.lower() }}">
+                <td><input type="checkbox" class="incident-checkbox" value="{{ incident.number }}"></td>
+                <td><a href="{{ url_for('incident_detail', incident_number=incident.number) }}" class="incident-link">{{
+                        incident.number }}</a></td>
+                <td>{{ incident.created_at }}</td> <!-- Simplified date for now -->
+                <td>{{ incident.title }}</td>
+                <td><a href="#" class="service-link">{{ incident.service }}</a></td>
+                <td>{{ incident.assigned_to }}</td>
+                <td><span class="status-badge {{ incident.status.lower() }}">{{ incident.status }}</span></td>
+                <td><a href="{{ url_for('incident_detail', incident_number=incident.number) }}"
+                        class="details-link">Details</a></td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+
+<script>
+    function performBulkAction(action) {
+        const checkboxes = document.querySelectorAll('.incident-checkbox:checked');
+        const incidentIds = Array.from(checkboxes).map(cb => cb.value);
+
+        if (incidentIds.length === 0) {
+            alert('Please select at least one incident.');
+            return;
+        }
+
+        let body = {
+            incident_ids: incidentIds,
+            action: action
+        };
+
+        if (action === 'reassign') {
+            const assignee = prompt("Enter the name of the person to reassign to:");
+            if (!assignee) return; // Cancelled
+            body.assignee = assignee;
+        }
+
+        fetch('/api/incidents/bulk_update', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(body),
+        })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    window.location.reload();
+                } else {
+                    alert('Error updating incidents: ' + (data.error || 'Unknown error'));
+                }
+            })
+            .catch((error) => {
+                console.error('Error:', error);
+                alert('An error occurred.');
+            });
+    }
+</script>
+
+<div class="sidebar">
+    <!-- Placeholder for sidebar content if needed, mimicking the screenshot's right side -->
+</div>
+{% endblock %}

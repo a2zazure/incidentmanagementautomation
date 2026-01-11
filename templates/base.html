@@ -1,0 +1,41 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>IncidentDeck</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+    <!-- Google Fonts for a premium look -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <nav class="navbar">
+        <div class="logo">IncidentDeck</div>
+        <ul class="nav-links">
+            <li><a href="{{ url_for('incidents') }}" class="active">Dashboard</a></li>
+            <li><a href="{{ url_for('incidents') }}">Incidents</a></li>
+            <li><a href="{{ url_for('configuration') }}">Configuration</a></li>
+            <li><a href="{{ url_for('analytics') }}">Analytics</a></li>
+        </ul>
+        <div class="nav-right">
+            <div class="help-icon">?</div>
+            <div class="user-profile">
+                <span>My Teams</span>
+                <img src="https://ui-avatars.com/api/?name=User&background=random" alt="User Avatar" class="avatar">
+            </div>
+        </div>
+    </nav>
+
+    <div class="container">
+        {% if content %}
+            <div class="placeholder-content">
+                <h1>{{ content }}</h1>
+            </div>
+        {% else %}
+            {% block content %}{% endblock %}
+        {% endif %}
+    </div>
+</body>
+</html>
