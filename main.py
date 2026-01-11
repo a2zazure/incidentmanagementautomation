@@ -3,8 +3,8 @@ import json
 import datetime
 
 def main():
-    # URL of the local Flask app's API
-    url = "http://127.0.0.1:5001/api/incidents"
+    # URL of the local Flask app's API with agent format
+    url = "http://127.0.0.1:5001/api/incidents?format=agent"
 
     try:
         # Fetch data from the URL
@@ -17,21 +17,18 @@ def main():
 
         output_file = "incidents.jsonl"
         with open(output_file, "w") as f:
+            count = 0
             for inc in incidents:
-                # Map fields to match specific schema requirements
-                record = {
-                    "id": f"INC-{inc.get('number', '000000'):06}",
-                    "createdAt": inc.get('created_at'),
-                    "title": inc.get('title'),
-                    "tables": ["SecurityEvent", "Heartbeat"], # Hardcoded placeholder
-                    "severity": "P2", # Hardcoded placeholder
-                    "status": inc.get('status').lower()
-                }
+                # Filter for Open incidents (Triggered or Acknowledged)
+                current_status = inc.get('status').lower()
+                if current_status not in ['triggered', 'acknowledged']:
+                    continue
+
+                # API already provides the correct schema
+                f.write(json.dumps(inc) + "\n")
+                count += 1
                 
-                # Write as single line JSON
-                f.write(json.dumps(record) + "\n")
-                
-        print(f"Successfully exported {len(incidents)} incidents to {output_file}")
+        print(f"Successfully exported {count} open incidents to {output_file}")
 
     except requests.exceptions.RequestException as e:
         print(f"Error fetching data: {e}")

@@ -33,7 +33,9 @@ def init_db():
                 (32512, 'Low Appdex on Web Server', 'New Relic', 'Triggered', '--'),
                 (32511, 'High Load on Web Server', 'New Relic', 'Triggered', '--'),
                 (32510, 'A triggered incident', 'logic monitor stuff', 'Triggered', '--'),
-                (32509, 'A triggered incident', 'Nagios', 'Triggered', '--')
+                (32509, 'A triggered incident', 'Nagios', 'Triggered', '--'),
+                (32508, 'AzureMetrics table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--'),
+                (32507, 'Usage table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--')
             ]
             # We need to insert created_at as well, let's just use current time for simplicity or fake it
             # For simplicity in this demo, we'll let the DB handle created_at or pass it if needed.
@@ -123,13 +125,16 @@ def incident_detail(incident_number):
 
 @app.route('/api/incidents/bulk_update', methods=['POST'])
 def bulk_update():
-    data = request.get_json()
-    incident_ids = data.get('incident_ids', [])
+    data = request.get_json(silent=True) or {}
+    incident_ids = data.get('incident_ids') or []
     action = data.get('action')
     assignee = data.get('assignee')
     
     if not incident_ids or not action:
         return {"error": "Missing incident_ids or action"}, 400
+        
+    if action == 'reassign' and not assignee:
+         return {"error": "Missing assignee for reassign action"}, 400
         
     conn = get_db_connection()
     placeholders = ','.join('?' * len(incident_ids))
@@ -141,11 +146,10 @@ def bulk_update():
         query = f'UPDATE incident SET status = ? WHERE number IN ({placeholders})'
         conn.execute(query, ['Acknowledged'] + incident_ids)
     elif action == 'reassign':
-        if not assignee:
-             return {"error": "Missing assignee for reassign action"}, 400
         query = f'UPDATE incident SET assigned_to = ? WHERE number IN ({placeholders})'
         conn.execute(query, [assignee] + incident_ids)
     else:
+        conn.close()
         return {"error": "Invalid action"}, 400
         
     conn.commit()
@@ -155,21 +159,56 @@ def bulk_update():
 
 @app.route('/api/incidents', methods=['GET'])
 def get_incidents():
+    fmt = request.args.get('format')
     conn = get_db_connection()
     incidents = conn.execute('SELECT * FROM incident').fetchall()
     conn.close()
     
+    if fmt == 'agent':
+        agent_incidents = []
+        for ix in incidents:
+            # Convert timestamp to ISO 8601 if possible, or keep as is
+            # SQLite default is often "YYYY-MM-DD HH:MM:SS" -> add "T" and TZ
+            created = ix['created_at']
+            if 'T' not in created: 
+                 created = created.replace(' ', 'T') + '+01:00' # Assuming local +1 for now or UTC
+
+            agent_incidents.append({
+                "id": f"INC-{ix['number']:06}",
+                "createdAt": created,
+                "title": ix['title'],
+                "severity": "P2", # Placeholder
+                "status": ix['status'].lower(),
+                "tables": ["SecurityEvent", "Heartbeat"],
+                "source": "demo",
+                "rule": "IngestionDelayAlert"
+            })
+        return {"incidents": agent_incidents}
+
     incidents_list = [dict(ix) for ix in incidents]
     return {"incidents": incidents_list}
 
 @app.route('/api/incidents/generate', methods=['POST'])
 def generate_incidents():
-    count = request.args.get('count', default=1, type=int)
+    # Allow count from query param OR JSON body
+    count = request.args.get('count', type=int)
+    if count is None:
+        data = request.get_json(silent=True) or {}
+        count = data.get('count', 1)
+
     conn = get_db_connection()
     
     services = ['New Relic', 'Datadog', 'Nagios', 'AWS CloudWatch', 'Azure Monitor']
     statuses = ['Triggered', 'Acknowledged']
-    titles = ['High CPU Usage', 'Memory Leak Detected', 'Disk Space Low', 'API Latency High', 'Service Unreachable']
+    titles = [
+        'High CPU Usage', 
+        'Memory Leak Detected', 
+        'Disk Space Low', 
+        'API Latency High', 
+        'Service Unreachable',
+        'AzureMetrics table does not get data for last 3 months',
+        'Usage table does not get data for last 3 months'
+    ]
     
     new_incidents = []
     
