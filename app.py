@@ -2,6 +2,7 @@ import os
 import datetime
 from flask import Flask, render_template, request, redirect, url_for
 import sqlite3
+import random
 
 app = Flask(__name__)
 DB_NAME = "incidents.db"
@@ -160,6 +161,37 @@ def get_incidents():
     
     incidents_list = [dict(ix) for ix in incidents]
     return {"incidents": incidents_list}
+
+@app.route('/api/incidents/generate', methods=['POST'])
+def generate_incidents():
+    count = request.args.get('count', default=1, type=int)
+    conn = get_db_connection()
+    
+    services = ['New Relic', 'Datadog', 'Nagios', 'AWS CloudWatch', 'Azure Monitor']
+    statuses = ['Triggered', 'Acknowledged']
+    titles = ['High CPU Usage', 'Memory Leak Detected', 'Disk Space Low', 'API Latency High', 'Service Unreachable']
+    
+    new_incidents = []
+    
+    # Get last number to increment
+    cursor = conn.execute('SELECT MAX(number) FROM incident')
+    max_num = cursor.fetchone()[0] or 30000
+    
+    for i in range(count):
+        new_num = max_num + 1 + i
+        title = random.choice(titles)
+        service = random.choice(services)
+        status = random.choice(statuses)
+        
+        conn.execute('INSERT INTO incident (number, title, service, status, assigned_to) VALUES (?, ?, ?, ?, ?)',
+                     (new_num, title, service, status, '--'))
+        new_incidents.append(new_num)
+        
+    conn.commit()
+    conn.close()
+    
+    return {"message": f"Generated {count} incidents", "ids": new_incidents}
+
 
 @app.route('/configuration')
 def configuration():

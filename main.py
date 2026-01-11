@@ -15,20 +15,21 @@ def main():
         data = response.json()
         incidents = data.get("incidents", [])
 
-        output_file = "incidents.txt"
+        output_file = "incidents.jsonl"
         with open(output_file, "w") as f:
-            header = f"{'No.':<8} {'Created On':<22} {'Status':<12} {'Details'}"
-            f.write(header + "\n")
-            f.write("-" * 80 + "\n")
-
             for inc in incidents:
-                number = inc.get('number')
-                created_at = inc.get('created_at')
-                status = inc.get('status')
-                details = inc.get('title') # Mapping 'title' to 'Details'
-
-                line = f"{number:<8} {created_at:<22} {status:<12} {details}"
-                f.write(line + "\n")
+                # Map fields to match specific schema requirements
+                record = {
+                    "id": f"INC-{inc.get('number', '000000'):06}",
+                    "createdAt": inc.get('created_at'),
+                    "title": inc.get('title'),
+                    "tables": ["SecurityEvent", "Heartbeat"], # Hardcoded placeholder
+                    "severity": "P2", # Hardcoded placeholder
+                    "status": inc.get('status').lower()
+                }
+                
+                # Write as single line JSON
+                f.write(json.dumps(record) + "\n")
                 
         print(f"Successfully exported {len(incidents)} incidents to {output_file}")
 
