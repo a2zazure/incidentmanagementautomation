@@ -13,10 +13,11 @@ def verify_table_data(tables):
     credential = DefaultAzureCredential()
     client = LogsQueryClient(credential)
     workspace_id = os.environ.get("LOG_ANALYTICS_WORKSPACE_ID")
+    verified_tables = []
 
     if not workspace_id:
         print("Error: LOG_ANALYTICS_WORKSPACE_ID environment variable is not set.")
-        return
+        return []
 
     print(f"Checking data existence for tables: {', '.join(tables)} (Last 90 days)")
 
@@ -33,6 +34,7 @@ def verify_table_data(tables):
             if response.status == LogsQueryStatus.SUCCESS:
                 if response.tables and len(response.tables[0].rows) > 0:
                     print(f"✅ Data found for {table}")
+                    verified_tables.append(table)
                 else:
                     print(f"❌ No data found for {table}")
             else:
@@ -40,6 +42,8 @@ def verify_table_data(tables):
                 
         except Exception as e:
              print(f"⚠️ Error querying {table}: {e}")
+             
+    return verified_tables
 
 if __name__ == "__main__":
     if len(sys.argv) < 2:

@@ -1,14 +1,16 @@
 
 import os
 import json
-from openai import OpenAI
+from openai import AzureOpenAI
 from dotenv import load_dotenv
 
 # Load environment variables
 load_dotenv()
 
-client = OpenAI(
-    api_key=os.environ.get("OPENAI_API_KEY"),
+client = AzureOpenAI(
+    api_key=os.environ.get("AZURE_MODEL_KEY"),
+    api_version="2024-05-01-preview",
+    azure_endpoint="https://samratisbest-4230-resource.cognitiveservices.azure.com/"
 )
 
 def analyze_incidents():
@@ -44,15 +46,19 @@ def analyze_incidents():
                         "content": f"Incident: {description}"
                     }
                 ],
-                model="gpt-3.5-turbo",
+                model="gpt-4.1",
                 temperature=0,
             )
             
             result = response.choices[0].message.content.strip()
             
             if result and result != 'None':
-                print(f"Found missing data table: {result}")
-                missing_data_tables.append(result)
+                print(f"Found missing data table: {result} for Incident: {incident.get('id')}")
+                # Store both the table name and the incident ID
+                missing_data_tables.append({
+                    "table": result,
+                    "id": incident.get('id', '').replace('INC-', '').lstrip('0') # Extract clean number for API
+                })
                 
         except json.JSONDecodeError:
             continue
@@ -60,7 +66,11 @@ def analyze_incidents():
             print(f"Error processing incident: {e}")
 
     print("\nSummary of tables with missing data:")
-    print(missing_data_tables)
+    # Print just unique tables for cleaner output
+    unique_tables = list(set([item['table'] for item in missing_data_tables]))
+    print(unique_tables)
+    
+    return missing_data_tables
 
 if __name__ == "__main__":
     analyze_incidents()

@@ -1,39 +1,72 @@
+print("Main script starting...", flush=True)
+import collect_incidents
+import triage
+import verify_tables
+import time
 import requests
 import json
-import datetime
 
-def main():
-    # URL of the local Flask app's API with agent format
-    url = "http://127.0.0.1:5001/api/incidents?format=agent"
-
+def resolve_incidents(incident_ids):
+    if not incident_ids:
+        return
+        
+    url = "http://127.0.0.1:5001/api/incidents/bulk_update"
+    payload = {
+        "action": "resolve",
+        "incident_ids": incident_ids
+    }
+    
     try:
-        # Fetch data from the URL
-        response = requests.get(url)
+        response = requests.post(url, json=payload)
         response.raise_for_status()
+        print(f" Successfully resolved {len(incident_ids)} incidents: {incident_ids}")
+    except Exception as e:
+        print(f"Failed to verify/resolve incidents: {e}")
 
-        # Parse JSON response
-        data = response.json()
-        incidents = data.get("incidents", [])
+def run_pipeline():
+    print(" Starting Incident Management Pipeline")
+    print("=" * 50)
+    
+    # Step 1: Collect Incidents
+    print("\n[Step 1] Collecting incidents...")
+    collect_incidents.main()
+    print("Collection complete.")
+    
+    # Step 2: AI Triage
+    print("\n[Step 2] Running AI Triage...")
+    # Triage now returns detailed list: [{'table': 'Usage', 'id': '32508'}, ...]
+    triage_results = triage.analyze_incidents()
+    
+    if not triage_results:
+        print("No tables needing verification found. Pipeline finished.")
+        return
+        
+    unique_tables_to_verify = list(set([item['table'] for item in triage_results]))
+    print(f"Triage complete. Tables to check: {unique_tables_to_verify}")
+    
+    # Step 3: Verify Data
+    print("\n[Step 3] Verifying Data in Azure...")
+    verified_tables = verify_tables.verify_table_data(unique_tables_to_verify)
+    print(f"Verification complete. Content verified for: {verified_tables}")
+    
+    # Step 4: Auto-Resolve
+    if verified_tables:
+        print("\n[Step 4] Auto-Resolving Verified Incidents...")
+        incidents_to_resolve = []
+        
+        for item in triage_results:
+            if item['table'] in verified_tables and item['id']:
+                 incidents_to_resolve.append(item['id'])
+        
+        if incidents_to_resolve:
+            resolve_incidents(list(set(incidents_to_resolve)))
+        else:
+            print("ℹNo incidents matched the verified tables.")
+    else:
+        print("\nℹNo tables were verified as having data. No incidents to resolve.")
 
-        output_file = "incidents.jsonl"
-        with open(output_file, "w") as f:
-            count = 0
-            for inc in incidents:
-                # Filter for Open incidents (Triggered or Acknowledged)
-                current_status = inc.get('status').lower()
-                if current_status not in ['triggered', 'acknowledged']:
-                    continue
-
-                # API already provides the correct schema
-                f.write(json.dumps(inc) + "\n")
-                count += 1
-                
-        print(f"Successfully exported {count} open incidents to {output_file}")
-
-    except requests.exceptions.RequestException as e:
-        print(f"Error fetching data: {e}")
-    except json.JSONDecodeError:
-        print("Error: Failed to decode JSON response")
+    print("\n" + "=" * 50)
+    print("Pipeline Execution Finished")
 
 if __name__ == "__main__":
-    main()
+    run_pipeline()
