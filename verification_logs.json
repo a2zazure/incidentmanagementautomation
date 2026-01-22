@@ -1,0 +1,17 @@
+[
+  {
+    "table": "Usage",
+    "status": "Verified",
+    "message": "Data found within last 90 days"
+  },
+  {
+    "table": "Test",
+    "status": "Error",
+    "message": "(BadArgumentError) The request had some invalid properties\nCode: BadArgumentError\nMessage: The request had some invalid properties\nInner error: {\n    \"code\": \"SemanticError\",\n    \"message\": \"A semantic error occurred.\",\n    \"innererror\": {\n        \"code\": \"SEM0100\",\n        \"message\": \"'where' operator: Failed to resolve table or column expression named 'Test'\"\n    }\n}"
+  },
+  {
+    "table": "AzureMetrics",
+    "status": "Verified",
+    "message": "Data found within last 90 days"
+  }
+]

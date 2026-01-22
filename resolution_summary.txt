@@ -1,0 +1,29 @@
+Subject: Incident Verification Report – Automated Pipeline Results
+
+Dear Operations Team,
+
+Please find below the summary of the recent automated incident resolution pipeline verification:
+
+**Verified Tables:**
+- Usage: Data found within last 90 days.
+- AzureMetrics: Data found within last 90 days.
+
+**Critical Failures:**
+- Test: Verification failed with the following error:
+  (BadArgumentError) The request had some invalid properties  
+  Code: BadArgumentError  
+  Message: The request had some invalid properties  
+  Inner error:  
+    - Code: SemanticError  
+    - Message: A semantic error occurred.  
+    - Inner error:  
+        - Code: SEM0100  
+        - Message: 'where' operator: Failed to resolve table or column expression named 'Test'
+
+**Action Required:**  
+Please investigate the error with the "Test" table to resolve the semantic issue and ensure all required data is available for incident verification.
+
+Let me know if further details are needed.
+
+Best regards,  
+[Your Name]

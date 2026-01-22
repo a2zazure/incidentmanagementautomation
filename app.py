@@ -35,7 +35,8 @@ def init_db():
                 (32510, 'A triggered incident', 'logic monitor stuff', 'Triggered', '--'),
                 (32509, 'A triggered incident', 'Nagios', 'Triggered', '--'),
                 (32508, 'AzureMetrics table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--'),
-                (32507, 'Usage table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--')
+                (32507, 'Usage table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--'),
+                (32506, 'Test table does not get data for last 3 months', 'Azure Monitor', 'Triggered', '--')
             ]
             # We need to insert created_at as well, let's just use current time for simplicity or fake it
             # For simplicity in this demo, we'll let the DB handle created_at or pass it if needed.
@@ -207,7 +208,8 @@ def generate_incidents():
         'API Latency High', 
         'Service Unreachable',
         'AzureMetrics table does not get data for last 3 months',
-        'Usage table does not get data for last 3 months'
+        'Usage table does not get data for last 3 months',
+        'Test table does not get data for last 3 months'
     ]
     
     new_incidents = []

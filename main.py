@@ -46,9 +46,18 @@ def run_pipeline():
     
     # Step 3: Verify Data
     print("\n[Step 3] Verifying Data in Azure...")
-    verified_tables = verify_tables.verify_table_data(unique_tables_to_verify)
-    print(f"Verification complete. Content verified for: {verified_tables}")
+    verified_tables, detailed_logs = verify_tables.verify_table_data(unique_tables_to_verify)
+    print(f"Verification complete. verified_tables: {verified_tables}")
     
+    # Save logs to file
+    log_file = "verification_logs.json"
+    try:
+        with open(log_file, "w") as f:
+            json.dump(detailed_logs, f, indent=2)
+        print(f"Detailed logs saved to {log_file}")
+    except Exception as e:
+        print(f"Error saving logs: {e}")
+
     # Step 4: Auto-Resolve
     if verified_tables:
         print("\n[Step 4] Auto-Resolving Verified Incidents...")
@@ -64,6 +73,21 @@ def run_pipeline():
             print("ℹNo incidents matched the verified tables.")
     else:
         print("\nℹNo tables were verified as having data. No incidents to resolve.")
+
+    # Step 5: AI Summary
+    print("\n[Step 5] Generating AI Summary Report...")
+    import summarize_logs
+    summary_text = summarize_logs.generate_summary(log_file)
+    
+    print("\n" + "-"*30)
+    print("SUMMARY REPORT")
+    print("-"*30)
+    print(summary_text)
+    print("-"*30)
+    
+    with open("resolution_summary.txt", "w") as f:
+        f.write(summary_text)
+    print("Summary saved to resolution_summary.txt")
 
     print("\n" + "=" * 50)
     print("Pipeline Execution Finished")
